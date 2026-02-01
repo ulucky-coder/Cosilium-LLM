@@ -1,0 +1,189 @@
+{
+  "agents": {
+    "chatgpt": {
+      "name": "ChatGPT",
+      "role": "Logical Analyst",
+      "description": "Логический аналитик — проверка корректности рассуждений",
+      "api": {
+        "provider": "openai",
+        "model": "gpt-4o",
+        "fallback_model": "gpt-4o-mini",
+        "temperature": 0.3,
+        "max_tokens": 4096,
+        "timeout_ms": 120000
+      },
+      "capabilities": [
+        "logical_analysis",
+        "bias_detection",
+        "assumption_extraction",
+        "falsifiability_check",
+        "contradiction_detection"
+      ],
+      "iteration_roles": {
+        "1": "independent_analysis",
+        "2": "critique",
+        "3": "verification"
+      }
+    },
+
+    "claude": {
+      "name": "Claude",
+      "role": "System Architect & Integrator",
+      "description": "Системный архитектор — методология и интеграция результатов",
+      "api": {
+        "provider": "anthropic",
+        "model": "claude-sonnet-4-20250514",
+        "fallback_model": "claude-3-5-sonnet-20241022",
+        "temperature": 0.4,
+        "max_tokens": 8192,
+        "timeout_ms": 180000
+      },
+      "capabilities": [
+        "methodology_design",
+        "conceptual_clarity",
+        "boundary_analysis",
+        "integration",
+        "final_synthesis"
+      ],
+      "iteration_roles": {
+        "1": "independent_analysis",
+        "2": "critique",
+        "3": "synthesis"
+      },
+      "is_orchestrator": true
+    },
+
+    "gemini": {
+      "name": "Gemini",
+      "role": "Alternatives Generator",
+      "description": "Генератор альтернатив — расширение пространства решений",
+      "api": {
+        "provider": "google",
+        "model": "gemini-2.0-flash",
+        "fallback_model": "gemini-1.5-pro",
+        "temperature": 0.7,
+        "max_tokens": 4096,
+        "timeout_ms": 120000
+      },
+      "capabilities": [
+        "hypothesis_generation",
+        "scenario_analysis",
+        "cross_domain_analogies",
+        "blind_spot_detection",
+        "creative_solutions"
+      ],
+      "iteration_roles": {
+        "1": "independent_analysis",
+        "2": "critique",
+        "3": "alternative_validation"
+      }
+    },
+
+    "deepseek": {
+      "name": "DeepSeek",
+      "role": "Formal & Technical Analyst",
+      "description": "Формальный аналитик — данные, математика, верификация",
+      "api": {
+        "provider": "deepseek",
+        "model": "deepseek-chat",
+        "fallback_model": "deepseek-chat",
+        "temperature": 0.2,
+        "max_tokens": 4096,
+        "timeout_ms": 120000
+      },
+      "capabilities": [
+        "data_analysis",
+        "quantitative_modeling",
+        "statistical_validation",
+        "sensitivity_analysis",
+        "mathematical_verification"
+      ],
+      "iteration_roles": {
+        "1": "independent_analysis",
+        "2": "critique",
+        "3": "verification"
+      }
+    }
+  },
+
+  "orchestration": {
+    "max_iterations": 3,
+    "parallel_execution": true,
+    "timeout_per_iteration_ms": 300000,
+    "retry_on_failure": true,
+    "max_retries": 2,
+    "fallback_on_timeout": true
+  },
+
+  "quality_criteria": [
+    {
+      "id": "logical_correctness",
+      "name": "Логическая корректность",
+      "description": "Нет ли разрывов в цепочке рассуждений",
+      "weight": 0.15
+    },
+    {
+      "id": "assumptions",
+      "name": "Явные и скрытые предпосылки",
+      "description": "Все ли допущения озвучены",
+      "weight": 0.10
+    },
+    {
+      "id": "data_quality",
+      "name": "Качество данных",
+      "description": "Релевантность и достоверность данных",
+      "weight": 0.10
+    },
+    {
+      "id": "methodology",
+      "name": "Методология анализа",
+      "description": "Адекватность выбранных методов",
+      "weight": 0.10
+    },
+    {
+      "id": "alternatives",
+      "name": "Альтернативные объяснения",
+      "description": "Рассмотрены ли другие гипотезы",
+      "weight": 0.10
+    },
+    {
+      "id": "boundaries",
+      "name": "Границы применимости",
+      "description": "Где выводы перестают работать",
+      "weight": 0.10
+    },
+    {
+      "id": "clarity",
+      "name": "Ясность понятий",
+      "description": "Однозначность терминов",
+      "weight": 0.05
+    },
+    {
+      "id": "cognitive_biases",
+      "name": "Когнитивные искажения",
+      "description": "Confirmation bias и др.",
+      "weight": 0.10
+    },
+    {
+      "id": "falsifiability",
+      "name": "Фальсифицируемость",
+      "description": "Можно ли опровергнуть вывод",
+      "weight": 0.10
+    },
+    {
+      "id": "mathematical_correctness",
+      "name": "Математическая корректность",
+      "description": "Правильность вычислений и формул",
+      "weight": 0.10
+    }
+  ],
+
+  "output_format": {
+    "include_report": true,
+    "include_conclusions_table": true,
+    "include_formulas": true,
+    "include_recommendations": true,
+    "formula_format": "latex",
+    "language": "ru"
+  }
+}

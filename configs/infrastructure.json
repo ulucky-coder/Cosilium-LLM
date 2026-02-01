@@ -1,0 +1,132 @@
+{
+  "n8n": {
+    "cloud_url": "https://ulucky.app.n8n.cloud",
+    "api_base": "https://ulucky.app.n8n.cloud/api/v1",
+    "workflows": {
+      "orchestrator": {
+        "name": "Cosilium-Orchestrator",
+        "description": "Main orchestration workflow"
+      },
+      "agent_chatgpt": {
+        "name": "Cosilium-Agent-ChatGPT",
+        "description": "ChatGPT logical analyst sub-workflow"
+      },
+      "agent_claude": {
+        "name": "Cosilium-Agent-Claude",
+        "description": "Claude architect sub-workflow"
+      },
+      "agent_gemini": {
+        "name": "Cosilium-Agent-Gemini",
+        "description": "Gemini alternatives generator sub-workflow"
+      },
+      "agent_deepseek": {
+        "name": "Cosilium-Agent-DeepSeek",
+        "description": "DeepSeek formal analyst sub-workflow"
+      },
+      "context_loader": {
+        "name": "Cosilium-Context-Loader",
+        "description": "RAG context document processor"
+      },
+      "embeddings_generator": {
+        "name": "Cosilium-Embeddings",
+        "description": "Generate embeddings for RAG"
+      }
+    },
+    "credentials_required": [
+      {
+        "name": "OpenAI API",
+        "type": "openAiApi",
+        "description": "For ChatGPT agent and embeddings"
+      },
+      {
+        "name": "Anthropic API",
+        "type": "anthropicApi",
+        "description": "For Claude agent"
+      },
+      {
+        "name": "Google AI API",
+        "type": "googleAi",
+        "description": "For Gemini agent"
+      },
+      {
+        "name": "DeepSeek API",
+        "type": "httpHeaderAuth",
+        "description": "For DeepSeek agent (custom header auth)"
+      },
+      {
+        "name": "Supabase Cosilium",
+        "type": "supabaseApi",
+        "description": "For database operations"
+      },
+      {
+        "name": "Redis Cosilium",
+        "type": "redis",
+        "description": "For state management and caching"
+      }
+    ]
+  },
+
+  "supabase": {
+    "url": "https://daqaxdkyufelexsivywl.supabase.co",
+    "tables": [
+      "analysis_sessions",
+      "agent_responses",
+      "inter_agent_dialogues",
+      "final_results",
+      "rag_prompts",
+      "rag_thinking_patterns",
+      "task_context",
+      "quality_metrics",
+      "prompt_ab_tests",
+      "audit_log"
+    ],
+    "functions": [
+      "get_active_prompt",
+      "search_thinking_patterns",
+      "search_task_context",
+      "calculate_session_quality"
+    ]
+  },
+
+  "redis": {
+    "key_prefix": "cosilium",
+    "keys": {
+      "session_state": "cosilium:session:{session_id}:state",
+      "session_iteration": "cosilium:session:{session_id}:iteration",
+      "agent_queue": "cosilium:agent:{agent_name}:queue",
+      "rate_limit": "cosilium:rate_limit:{api_name}",
+      "cache_response": "cosilium:cache:{hash}"
+    },
+    "ttl": {
+      "session_state": 3600,
+      "cache_response": 86400,
+      "rate_limit": 60
+    }
+  },
+
+  "embeddings": {
+    "provider": "openai",
+    "model": "text-embedding-3-small",
+    "dimensions": 1536,
+    "batch_size": 100
+  },
+
+  "rate_limits": {
+    "openai": {
+      "requests_per_minute": 500,
+      "tokens_per_minute": 150000
+    },
+    "anthropic": {
+      "requests_per_minute": 50,
+      "tokens_per_minute": 100000
+    },
+    "google": {
+      "requests_per_minute": 60,
+      "tokens_per_minute": 100000
+    },
+    "deepseek": {
+      "requests_per_minute": 60,
+      "tokens_per_minute": 100000
+    }
+  }
+}
