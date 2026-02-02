@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     llm_proxy_api_key: str = ""
     llm_proxy_base_url: str = "https://api.vsellm.ru/v1"
 
+    # Tavily (search API, альтернатива Perplexity)
+    tavily_api_key: str = ""
+    tavily_enabled: bool = False
+
     # Model settings (compatible with vsellm.ru proxy)
     chatgpt_model: str = "gpt-4o"
     claude_model: str = "claude-3-5-sonnet-20241022"
