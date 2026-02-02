@@ -69,7 +69,7 @@ class CosiliumState(TypedDict):
 
 class TaskInput(BaseModel):
     """Входные данные для анализа"""
-    task: str = Field(..., description="Задача для анализа")
+    task: str = Field(..., min_length=1, description="Задача для анализа")
     task_type: Literal["strategy", "research", "investment", "development", "audit"] = "research"
     context: str = Field(default="", description="Дополнительный контекст")
     max_iterations: int = Field(default=3, ge=1, le=5)

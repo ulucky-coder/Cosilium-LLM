@@ -116,14 +116,15 @@ class TestAsyncAnalyzeEndpoint:
         assert data["status"] == "pending"
 
     def test_async_analyze_creates_task(self, client):
-        response = client.post(
-            "/analyze/async",
-            json={"task": "Test task"},
-        )
+        with patch("src.api.main.run_analysis_background"):
+            response = client.post(
+                "/analyze/async",
+                json={"task": "Test task"},
+            )
 
-        task_id = response.json()["task_id"]
-        assert task_id in tasks_store
-        assert tasks_store[task_id]["status"] == "pending"
+            task_id = response.json()["task_id"]
+            assert task_id in tasks_store
+            assert tasks_store[task_id]["status"] == "pending"
 
 
 class TestTasksEndpoint:
@@ -204,9 +205,8 @@ class TestInputValidation:
             "/analyze",
             json={"task": ""},
         )
-        # Empty string should be rejected by Pydantic
-        # depending on model configuration
-        assert response.status_code in [200, 422]
+        # Empty string is rejected by Pydantic min_length=1 validation
+        assert response.status_code == 422
 
     def test_max_iterations_bounds(self, client):
         # Too many iterations
