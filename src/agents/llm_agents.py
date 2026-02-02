@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: LLM Agents
+LLM-top: LLM Agents
 Конкретные реализации агентов для каждой LLM
 """
 
@@ -12,6 +12,18 @@ from src.agents.base import BaseAgent
 from src.config import get_settings
 
 
+def _create_proxy_llm(model: str) -> BaseChatModel:
+    """Создать LLM через vsellm.ru прокси"""
+    settings = get_settings()
+    return ChatOpenAI(
+        model=model,
+        temperature=settings.temperature,
+        max_tokens=settings.max_tokens,
+        api_key=settings.llm_proxy_api_key,
+        base_url=settings.llm_proxy_base_url,
+    )
+
+
 class ChatGPTAgent(BaseAgent):
     """Агент на базе ChatGPT - Логический аналитик"""
 
@@ -20,6 +32,8 @@ class ChatGPTAgent(BaseAgent):
 
     def _create_llm(self) -> BaseChatModel:
         settings = get_settings()
+        if settings.llm_proxy_enabled:
+            return _create_proxy_llm(settings.chatgpt_model)
         return ChatOpenAI(
             model=settings.chatgpt_model,
             temperature=settings.temperature,
@@ -36,6 +50,8 @@ class ClaudeAgent(BaseAgent):
 
     def _create_llm(self) -> BaseChatModel:
         settings = get_settings()
+        if settings.llm_proxy_enabled:
+            return _create_proxy_llm(settings.claude_model)
         return ChatAnthropic(
             model=settings.claude_model,
             temperature=settings.temperature,
@@ -52,6 +68,8 @@ class GeminiAgent(BaseAgent):
 
     def _create_llm(self) -> BaseChatModel:
         settings = get_settings()
+        if settings.llm_proxy_enabled:
+            return _create_proxy_llm(settings.gemini_model)
         return ChatGoogleGenerativeAI(
             model=settings.gemini_model,
             temperature=settings.temperature,
@@ -68,6 +86,8 @@ class DeepSeekAgent(BaseAgent):
 
     def _create_llm(self) -> BaseChatModel:
         settings = get_settings()
+        if settings.llm_proxy_enabled:
+            return _create_proxy_llm(settings.deepseek_model)
         # DeepSeek использует OpenAI-совместимый API
         return ChatOpenAI(
             model=settings.deepseek_model,

@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-# Cosilium-LLM: Apply Database Migrations
+# LLM-top: Apply Database Migrations
 # ============================================================
 
 set -e
@@ -15,7 +15,7 @@ NC='\033[0m'
 MIGRATIONS_DIR="$(dirname "$0")/../migrations"
 SUPABASE_URL="${SUPABASE_URL:-https://daqaxdkyufelexsivywl.supabase.co}"
 
-echo -e "${GREEN}=== Cosilium-LLM Database Migration ===${NC}"
+echo -e "${GREEN}=== LLM-top Database Migration ===${NC}"
 echo ""
 
 # Check for required environment variables

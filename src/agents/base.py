@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: Base Agent
+LLM-top: Base Agent
 Базовый класс агента
 """
 

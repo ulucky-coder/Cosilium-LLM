@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: Monitoring
+LLM-top: Monitoring
 LangSmith, quality metrics, A/B testing, feedback
 """
 

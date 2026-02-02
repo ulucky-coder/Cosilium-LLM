@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: Entry Point
+LLM-top: Entry Point
 Точка входа приложения
 """
 

@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: LangGraph Workflow
+LLM-top: LangGraph Workflow
 Основной граф выполнения
 """
 

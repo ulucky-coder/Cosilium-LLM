@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: A/B Testing
+LLM-top: A/B Testing
 Сравнение разных конфигураций агентов
 """
 

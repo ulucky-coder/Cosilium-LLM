@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: Rate Limiter
+LLM-top: Rate Limiter
 Ограничение частоты запросов к LLM API
 """
 

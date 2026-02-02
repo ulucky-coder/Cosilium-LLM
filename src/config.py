@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: Configuration
+LLM-top: Configuration
 """
 
 from pydantic_settings import BaseSettings
@@ -15,10 +15,15 @@ class Settings(BaseSettings):
     google_api_key: str = ""
     deepseek_api_key: str = ""
 
-    # Model settings
-    chatgpt_model: str = "gpt-4-turbo-preview"
-    claude_model: str = "claude-3-opus-20240229"
-    gemini_model: str = "gemini-pro"
+    # Universal LLM Proxy (vsellm.ru)
+    llm_proxy_enabled: bool = False
+    llm_proxy_api_key: str = ""
+    llm_proxy_base_url: str = "https://api.vsellm.ru/v1"
+
+    # Model settings (compatible with vsellm.ru proxy)
+    chatgpt_model: str = "gpt-4o"
+    claude_model: str = "claude-3-5-sonnet-20241022"
+    gemini_model: str = "gemini-1.5-pro"
     deepseek_model: str = "deepseek-chat"
 
     # LLM parameters

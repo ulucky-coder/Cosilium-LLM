@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: Iterative Process Improvements
+LLM-top: Iterative Process Improvements
 Adaptive iterations, focused refinement, disagreement resolution
 """
 

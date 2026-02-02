@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: Graph Tests
+LLM-top: Graph Tests
 Тесты для LangGraph workflow
 """
 

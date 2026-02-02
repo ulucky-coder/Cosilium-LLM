@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: Thinking Patterns
+LLM-top: Thinking Patterns
 Образы мышления величайших умов человечества
 """
 

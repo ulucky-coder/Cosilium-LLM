@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: Quality Metrics
+LLM-top: Quality Metrics
 Метрики качества анализа
 """
 

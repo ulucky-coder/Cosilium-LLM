@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: Tracing
+LLM-top: Tracing
 LangSmith интеграция для мониторинга
 """
 

@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: Agent Selector
+LLM-top: Agent Selector
 Динамический выбор агентов и fallback механизм
 """
 

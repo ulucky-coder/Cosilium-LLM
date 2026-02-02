@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: Prompt Evolution
+LLM-top: Prompt Evolution
 Система эволюции и оптимизации промптов на основе результатов
 """
 

@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: Expert Personas
+LLM-top: Expert Personas
 Агенты с личностями экспертов для специализированного анализа
 """
 

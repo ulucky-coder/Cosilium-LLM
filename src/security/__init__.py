@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: Security
+LLM-top: Security
 Input sanitization, authentication, audit logging
 """
 

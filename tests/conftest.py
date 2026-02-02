@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: Test Configuration
+LLM-top: Test Configuration
 Фикстуры и конфигурация для тестов
 """
 

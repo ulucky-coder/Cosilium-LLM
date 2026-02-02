@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: Audit Logger
+LLM-top: Audit Logger
 Логирование всех действий для безопасности и compliance
 """
 

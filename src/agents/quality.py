@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: Quality Enhancement
+LLM-top: Quality Enhancement
 Улучшение качества анализа: калибровка, веса, fact-checking
 """
 

@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: Celery Application
+LLM-top: Celery Application
 Распределённые задачи для длинных анализов
 """
 

@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: Integration Tests
+LLM-top: Integration Tests
 Интеграционные тесты (требуют API ключи)
 """
 

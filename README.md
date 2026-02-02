@@ -1,8 +1,8 @@
-# Cosilium-LLM
+# LLM-top
 
 **Мульти-агентная аналитическая система на LangGraph**
 
-Cosilium-LLM объединяет несколько LLM (ChatGPT, Claude, Gemini, DeepSeek) в единую систему для получения аналитических результатов, превосходящих уровень человеческих экспертов.
+LLM-top объединяет несколько LLM (ChatGPT, Claude, Gemini, DeepSeek) в единую систему для получения аналитических результатов, превосходящих уровень человеческих экспертов.
 
 ## Архитектура
 
@@ -55,7 +55,7 @@ Cosilium-LLM объединяет несколько LLM (ChatGPT, Claude, Gemin
 ### 1. Клонирование и настройка
 
 ```bash
-cd /root/projects/Cosilium-LLM
+cd /root/projects/LLM-top
 
 # Копируем .env
 cp .env.example .env
@@ -116,7 +116,7 @@ curl "http://localhost:8000/analyze/stream?task=Проанализировать
 ## Структура проекта
 
 ```
-Cosilium-LLM/
+LLM-top/
 ├── main.py                 # Точка входа
 ├── requirements.txt        # Зависимости
 ├── Dockerfile

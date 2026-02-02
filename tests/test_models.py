@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: Model Tests
+LLM-top: Model Tests
 Тесты для Pydantic моделей
 """
 

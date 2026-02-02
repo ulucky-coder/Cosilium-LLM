@@ -1,4 +1,4 @@
-# Cosilium-LLM Dockerfile
+# LLM-top Dockerfile
 
 FROM python:3.12-slim
 

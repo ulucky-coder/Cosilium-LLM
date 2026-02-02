@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: Redis State Store
+LLM-top: Redis State Store
 Персистентное хранение состояния в Redis
 """
 

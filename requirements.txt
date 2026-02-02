@@ -1,4 +1,4 @@
-# Cosilium-LLM Dependencies
+# LLM-top Dependencies
 
 # ============================================================
 # Core: LangChain & LangGraph

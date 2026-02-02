@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: Webhooks
+LLM-top: Webhooks
 Уведомления о завершении анализа
 """
 

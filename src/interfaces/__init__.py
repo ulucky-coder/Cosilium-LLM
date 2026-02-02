@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: Interfaces
+LLM-top: Interfaces
 Telegram, webhooks, Slack
 """
 

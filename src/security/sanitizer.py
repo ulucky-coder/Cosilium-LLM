@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: Input Sanitizer
+LLM-top: Input Sanitizer
 Защита от prompt injection и вредоносного ввода
 """
 

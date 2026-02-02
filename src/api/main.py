@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: FastAPI Application
+LLM-top: FastAPI Application
 REST API для системы
 """
 
@@ -18,7 +18,7 @@ settings = get_settings()
 
 # FastAPI app
 api = FastAPI(
-    title="Cosilium-LLM API",
+    title="LLM-top API",
     description="Мульти-агентная аналитическая система",
     version="1.0.0",
 )
@@ -41,7 +41,7 @@ async def root():
     """Health check"""
     return {
         "status": "ok",
-        "service": "Cosilium-LLM",
+        "service": "LLM-top",
         "version": "1.0.0",
     }
 

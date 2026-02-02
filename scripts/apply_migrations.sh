@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-# Cosilium-LLM: Apply Migrations to Supabase
+# LLM-top: Apply Migrations to Supabase
 # ============================================================
 #
 # This script helps you apply migrations to Supabase.
@@ -17,7 +17,7 @@ set -e
 MIGRATIONS_DIR="$(dirname "$0")/../migrations"
 
 echo "============================================================"
-echo "Cosilium-LLM: Database Migrations"
+echo "LLM-top: Database Migrations"
 echo "============================================================"
 echo ""
 echo "To apply migrations, copy the SQL below and run it in:"

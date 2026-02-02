@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: Vector Store
+LLM-top: Vector Store
 Векторное хранилище на базе Supabase pgvector
 """
 

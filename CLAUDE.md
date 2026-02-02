@@ -1,4 +1,4 @@
-# Cosilium-LLM
+# LLM-top
 
 ## Обзор проекта
 
@@ -48,7 +48,7 @@
 ## Структура проекта
 
 ```
-Cosilium-LLM/
+LLM-top/
 ├── ARCHITECTURE.md      # Полная архитектура системы
 ├── CLAUDE.md            # Этот файл
 ├── README.md            # Описание проекта

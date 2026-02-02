@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: RAG System
+LLM-top: RAG System
 Retrieval-Augmented Generation для улучшения качества анализа
 """
 

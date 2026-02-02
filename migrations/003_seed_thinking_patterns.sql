@@ -1,5 +1,5 @@
 -- ============================================================
--- Cosilium-LLM: Seed Data - Thinking Patterns of Great Minds
+-- LLM-top: Seed Data - Thinking Patterns of Great Minds
 -- Version: 1.0
 -- Date: 2026-02-01
 -- ============================================================

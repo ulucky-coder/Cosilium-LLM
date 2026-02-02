@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: Feedback Collector
+LLM-top: Feedback Collector
 Сбор и обработка обратной связи от пользователей
 """
 

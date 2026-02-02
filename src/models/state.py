@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: State Models
+LLM-top: State Models
 Модели состояния для LangGraph
 """
 

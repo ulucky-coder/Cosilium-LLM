@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: Synthesizer
+LLM-top: Synthesizer
 Компонент для синтеза результатов всех агентов
 """
 

@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: Infrastructure
+LLM-top: Infrastructure
 Redis, Celery, rate limiting, cost tracking, caching
 """
 

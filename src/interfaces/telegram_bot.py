@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: Telegram Bot
+LLM-top: Telegram Bot
 Telegram интерфейс для системы
 """
 
@@ -34,7 +34,7 @@ class UserSession(BaseModel):
 
 class CosiliumBot:
     """
-    Telegram бот для Cosilium-LLM
+    Telegram бот для LLM-top
 
     Команды:
     /start - Начать работу

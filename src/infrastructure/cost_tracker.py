@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: Cost Tracker
+LLM-top: Cost Tracker
 Отслеживание стоимости LLM вызовов
 """
 

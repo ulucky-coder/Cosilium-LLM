@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: Agent Tests
+LLM-top: Agent Tests
 Тесты для агентов
 """
 

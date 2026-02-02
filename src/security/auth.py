@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: Authentication
+LLM-top: Authentication
 JWT и API Key аутентификация
 """
 

@@ -1,5 +1,5 @@
 """
-Cosilium-LLM: API Tests
+LLM-top: API Tests
 Тесты для FastAPI endpoints
 """
 
@@ -32,7 +32,7 @@ class TestHealthEndpoints:
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "ok"
-        assert data["service"] == "Cosilium-LLM"
+        assert data["service"] == "LLM-top"
 
     def test_health(self, client):
         response = client.get("/health")
