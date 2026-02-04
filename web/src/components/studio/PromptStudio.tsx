@@ -22,6 +22,7 @@ import {
   Cloud,
   CloudOff,
 } from "lucide-react";
+import { VersionHistory } from "./VersionHistory";
 
 interface PromptStudioProps {
   onLog?: (message: string) => void;
@@ -163,6 +164,27 @@ export function PromptStudio({ onLog }: PromptStudioProps) {
           });
         }
       }
+
+      // Auto-save current version (fire and forget)
+      const currentContent =
+        activeTab === "system"
+          ? localPrompts.systemPrompt
+          : activeTab === "critique"
+          ? localPrompts.critiquePrompt
+          : localPrompts.userPromptTemplate;
+
+      fetch("/api/studio/versions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          agent_id: selectedAgent,
+          type: "prompt",
+          content: currentContent,
+          change_summary: `Saved ${activeTab} prompt`,
+        }),
+      }).catch(() => {
+        // Ignore version save errors
+      });
 
       setDataSource("database");
       onLog?.(`✓ Saved prompts for ${selectedAgent} to database`);
@@ -330,6 +352,29 @@ export function PromptStudio({ onLog }: PromptStudioProps) {
           </div>
 
           <div className="flex items-center gap-2">
+            {selectedAgent !== "synthesis" && activeTab !== "config" && (
+              <VersionHistory
+                agentId={selectedAgent}
+                agentName={AGENTS.find((a) => a.id === selectedAgent)?.name || selectedAgent}
+                currentContent={
+                  activeTab === "system"
+                    ? localPrompts.systemPrompt
+                    : activeTab === "critique"
+                    ? localPrompts.critiquePrompt
+                    : localPrompts.userPromptTemplate
+                }
+                onRollback={(content, version) => {
+                  const field =
+                    activeTab === "system"
+                      ? "systemPrompt"
+                      : activeTab === "critique"
+                      ? "critiquePrompt"
+                      : "userPromptTemplate";
+                  handlePromptChange(field, content);
+                  onLog?.(`✓ Rolled back to version ${version}`);
+                }}
+              />
+            )}
             <Button
               variant="ghost"
               size="sm"
