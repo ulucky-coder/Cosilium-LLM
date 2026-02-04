@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type DrawerContent = "agent" | "critique" | "settings" | "export" | null;
+export type DrawerContent = "agent" | "critique" | "settings" | "export" | "prompts" | "patterns" | null;
 export type ViewMode = "workspace" | "document" | "present" | "compare";
 
 interface UIState {

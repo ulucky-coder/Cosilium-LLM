@@ -332,6 +332,14 @@ export function Sidebar() {
                 </button>
               );
             })}
+            {/* Edit patterns button */}
+            <button
+              type="button"
+              onClick={() => openDrawer("patterns")}
+              className="w-full text-left text-xs py-1.5 px-2 rounded cursor-pointer text-violet-400 hover:bg-violet-500/10 border border-dashed border-violet-500/30 mt-2"
+            >
+              ✏️ Редактировать паттерны...
+            </button>
           </div>
         )}
       </div>
@@ -370,6 +378,35 @@ export function Sidebar() {
         >
           <kbd className="w-5 text-center text-xs text-slate-500">[?]</kbd>
           <span>Горячие клавиши</span>
+        </button>
+      </div>
+
+      {/* Admin Actions */}
+      <div className="p-4 border-t border-slate-800 space-y-1">
+        <div className="text-xs text-slate-500 uppercase tracking-wider mb-2">Администрирование</div>
+        <button
+          type="button"
+          onClick={() => openDrawer("prompts")}
+          className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-slate-400 hover:text-white hover:bg-slate-800/50 rounded"
+        >
+          <kbd className="w-5 text-center text-xs text-slate-500">[P]</kbd>
+          <span>Редактор промптов</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => openDrawer("patterns")}
+          className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-slate-400 hover:text-white hover:bg-slate-800/50 rounded"
+        >
+          <kbd className="w-5 text-center text-xs text-slate-500">[M]</kbd>
+          <span>Паттерны мышления</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => openDrawer("settings")}
+          className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-slate-400 hover:text-white hover:bg-slate-800/50 rounded"
+        >
+          <kbd className="w-5 text-center text-xs text-slate-500">[S]</kbd>
+          <span>Настройки сессии</span>
         </button>
       </div>
     </aside>

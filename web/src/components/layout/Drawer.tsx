@@ -3,7 +3,9 @@
 import { useUIStore } from "@/stores/uiStore";
 import { useSessionStore } from "@/stores/sessionStore";
 import { AGENTS, AgentId } from "@/lib/constants";
-import { X, RefreshCw, Copy, Edit, BarChart3, ChevronDown, ChevronUp, Download, FileJson, FileText, Printer, Check } from "lucide-react";
+import { X, RefreshCw, Copy, Edit, BarChart3, ChevronDown, ChevronUp, Download, FileJson, FileText, Printer, Check, Brain, MessageSquare } from "lucide-react";
+import { PatternsEditor } from "@/components/admin/PatternsEditor";
+import { PromptsEditor } from "@/components/admin/PromptsEditor";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -604,15 +606,36 @@ export function Drawer() {
 
   if (!drawerOpen) return null;
 
+  // Wider drawer for editors
+  const isWideDrawer = drawerContent === "prompts" || drawerContent === "patterns";
+
+  const getTitle = () => {
+    switch (drawerContent) {
+      case "agent": return "Инспектор агента";
+      case "critique": return "Детали критики";
+      case "settings": return "Настройки";
+      case "export": return "Экспорт";
+      case "prompts": return "Редактор промптов";
+      case "patterns": return "Паттерны мышления";
+      default: return "Детали";
+    }
+  };
+
+  const getIcon = () => {
+    switch (drawerContent) {
+      case "prompts": return <MessageSquare className="h-4 w-4 text-violet-400 mr-2" />;
+      case "patterns": return <Brain className="h-4 w-4 text-violet-400 mr-2" />;
+      default: return null;
+    }
+  };
+
   return (
-    <aside className="w-80 border-l border-slate-800 bg-slate-950/80 backdrop-blur-sm flex flex-col h-full">
+    <aside className={`${isWideDrawer ? "w-[480px]" : "w-80"} border-l border-slate-800 bg-slate-950/80 backdrop-blur-sm flex flex-col h-full`}>
       {/* Header */}
       <div className="h-12 flex items-center justify-between px-4 border-b border-slate-800">
-        <h2 className="text-sm font-medium text-white uppercase tracking-wider">
-          {drawerContent === "agent" ? "Инспектор агента" :
-           drawerContent === "critique" ? "Детали критики" :
-           drawerContent === "settings" ? "Настройки" :
-           drawerContent === "export" ? "Экспорт" : "Детали"}
+        <h2 className="text-sm font-medium text-white uppercase tracking-wider flex items-center">
+          {getIcon()}
+          {getTitle()}
         </h2>
         <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-white" onClick={closeDrawer}>
           <X className="h-4 w-4" />
@@ -629,6 +652,8 @@ export function Drawer() {
         )}
         {drawerContent === "settings" && <SettingsPanel />}
         {drawerContent === "export" && <ExportPanel />}
+        {drawerContent === "prompts" && <PromptsEditor />}
+        {drawerContent === "patterns" && <PatternsEditor />}
       </div>
     </aside>
   );
