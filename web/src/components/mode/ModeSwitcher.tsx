@@ -23,6 +23,7 @@ export function ModeSwitcher() {
 
         return (
           <button
+            type="button"
             key={mode.id}
             onClick={() => setViewMode(mode.id as ViewMode)}
             title={`${mode.label} (${mode.shortcut})`}

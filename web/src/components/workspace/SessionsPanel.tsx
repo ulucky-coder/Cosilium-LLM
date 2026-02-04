@@ -94,6 +94,7 @@ function SessionCard({ session, isActive, onSelect, onDelete }: SessionCardProps
 
   return (
     <button
+      type="button"
       onClick={onSelect}
       className={cn(
         "w-full text-left p-3 rounded-lg transition-colors group",
@@ -140,6 +141,7 @@ function SessionCard({ session, isActive, onSelect, onDelete }: SessionCardProps
       {/* Delete button - show on hover */}
       {!isActive && (
         <button
+          type="button"
           onClick={(e) => {
             e.stopPropagation();
             onDelete();

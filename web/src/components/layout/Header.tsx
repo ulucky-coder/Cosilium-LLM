@@ -45,6 +45,7 @@ export function Header() {
 
       {/* Command Bar */}
       <button
+        type="button"
         onClick={openCommandPalette}
         className="flex-1 max-w-md mx-auto h-8 px-3 rounded-lg bg-slate-900 border border-slate-700 flex items-center gap-2 text-slate-400 text-sm hover:border-slate-600 hover:text-slate-300 transition-colors"
       >

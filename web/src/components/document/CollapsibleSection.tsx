@@ -28,6 +28,7 @@ export function CollapsibleSection({
   return (
     <section id={id} className={cn("mb-8", className)}>
       <button
+        type="button"
         onClick={onToggle}
         className="flex items-center gap-2 w-full text-left group"
       >

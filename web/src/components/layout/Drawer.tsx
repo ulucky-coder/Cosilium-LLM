@@ -124,6 +124,7 @@ function AgentInspector({ agentId }: { agentId: string }) {
             {critiquesReceived.length > 0 && (
               <div className="p-4 border-b border-slate-800">
                 <button
+                  type="button"
                   onClick={() => toggleSection("critique")}
                   className="w-full flex items-center justify-between text-xs text-slate-500 uppercase tracking-wider mb-3"
                 >
@@ -160,6 +161,7 @@ function AgentInspector({ agentId }: { agentId: string }) {
             {/* Full Output */}
             <div className="p-4">
               <button
+                type="button"
                 onClick={() => toggleSection("output")}
                 className="w-full flex items-center justify-between text-xs text-slate-500 uppercase tracking-wider mb-3"
               >

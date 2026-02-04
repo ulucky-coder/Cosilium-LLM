@@ -258,6 +258,7 @@ function InputPanel() {
 
             {/* Advanced Settings Toggle */}
             <button
+              type="button"
               onClick={() => setShowAdvanced(!showAdvanced)}
               className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors"
             >
@@ -277,6 +278,7 @@ function InputPanel() {
                       const isSelected = currentSession.settings.agents.includes(agent.id);
                       return (
                         <button
+                          type="button"
                           key={agent.id}
                           onClick={() => {
                             const newAgents = isSelected

@@ -64,6 +64,7 @@ function AgentCard({ analysis, agent, onClick, compact }: AgentCardProps) {
   if (compact) {
     return (
       <button
+        type="button"
         onClick={onClick}
         className="text-left p-3 rounded-lg bg-slate-900/50 border border-slate-800 hover:border-slate-700 transition-colors"
       >

@@ -22,6 +22,7 @@ export function SpeakerNotes({ slide, visible, onClose }: SpeakerNotesProps) {
             Заметки спикера
           </h4>
           <button
+            type="button"
             onClick={onClose}
             className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
           >

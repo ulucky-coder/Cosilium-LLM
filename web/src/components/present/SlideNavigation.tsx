@@ -22,6 +22,7 @@ export function SlideNavigation({
     <div className="fixed bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4 z-50">
       {/* Prev Button */}
       <button
+        type="button"
         onClick={onPrev}
         disabled={currentIndex === 0}
         className={cn(
@@ -38,6 +39,7 @@ export function SlideNavigation({
       <div className="flex items-center gap-2 px-4 py-2 bg-slate-800/80 backdrop-blur-sm rounded-full">
         {Array.from({ length: totalSlides }).map((_, i) => (
           <button
+            type="button"
             key={i}
             onClick={() => onGoTo(i)}
             className={cn(
@@ -53,6 +55,7 @@ export function SlideNavigation({
 
       {/* Next Button */}
       <button
+        type="button"
         onClick={onNext}
         disabled={currentIndex === totalSlides - 1}
         className={cn(

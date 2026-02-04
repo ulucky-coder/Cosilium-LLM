@@ -206,6 +206,7 @@ export function Sidebar() {
       <div className="border-t border-slate-800">
         {/* History */}
         <button
+          type="button"
           onClick={() => toggleSection("history")}
           className="w-full px-4 py-3 flex items-center justify-between text-sm text-slate-300 hover:bg-slate-800/50"
         >
@@ -238,6 +239,7 @@ export function Sidebar() {
 
         {/* Templates */}
         <button
+          type="button"
           onClick={() => toggleSection("templates")}
           className="w-full px-4 py-3 flex items-center justify-between text-sm text-slate-300 hover:bg-slate-800/50"
         >
@@ -250,6 +252,7 @@ export function Sidebar() {
 
         {/* Thinking Patterns */}
         <button
+          type="button"
           onClick={() => toggleSection("patterns")}
           className="w-full px-4 py-3 flex items-center justify-between text-sm text-slate-300 hover:bg-slate-800/50"
         >
@@ -264,19 +267,35 @@ export function Sidebar() {
       {/* Quick Actions */}
       <div className="p-4 border-t border-slate-800 space-y-1">
         <div className="text-xs text-slate-500 uppercase tracking-wider mb-2">Быстрые действия</div>
-        <button className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-slate-400 hover:text-white hover:bg-slate-800/50 rounded">
+        <button
+          type="button"
+          onClick={createSession}
+          className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-slate-400 hover:text-white hover:bg-slate-800/50 rounded"
+        >
           <kbd className="w-5 text-center text-xs text-slate-500">[N]</kbd>
           <span>Новая сессия</span>
         </button>
-        <button className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-slate-400 hover:text-white hover:bg-slate-800/50 rounded">
+        <button
+          type="button"
+          onClick={() => console.log("Export clicked")}
+          className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-slate-400 hover:text-white hover:bg-slate-800/50 rounded"
+        >
           <kbd className="w-5 text-center text-xs text-slate-500">[E]</kbd>
           <span>Экспорт</span>
         </button>
-        <button className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-slate-400 hover:text-white hover:bg-slate-800/50 rounded">
+        <button
+          type="button"
+          onClick={() => console.log("Compare clicked")}
+          className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-slate-400 hover:text-white hover:bg-slate-800/50 rounded"
+        >
           <kbd className="w-5 text-center text-xs text-slate-500">[C]</kbd>
           <span>Сравнить</span>
         </button>
-        <button className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-slate-400 hover:text-white hover:bg-slate-800/50 rounded">
+        <button
+          type="button"
+          onClick={() => console.log("Hotkeys clicked")}
+          className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-slate-400 hover:text-white hover:bg-slate-800/50 rounded"
+        >
           <kbd className="w-5 text-center text-xs text-slate-500">[?]</kbd>
           <span>Горячие клавиши</span>
         </button>
