@@ -6,6 +6,7 @@ import { PromptStudio } from "./PromptStudio";
 import { PipelineBuilder } from "./PipelineBuilder";
 import { DatabaseStudio } from "./DatabaseStudio";
 import { MonitoringDashboard } from "./MonitoringDashboard";
+import { ExperimentPanel } from "./ExperimentPanel";
 import {
   Home,
   FileCode,
@@ -20,10 +21,11 @@ import {
   Undo,
   Terminal,
   X,
+  Beaker,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-type StudioTab = "home" | "prompts" | "pipeline" | "database" | "monitoring" | "settings";
+type StudioTab = "home" | "prompts" | "experiments" | "pipeline" | "database" | "monitoring" | "settings";
 
 interface NavItem {
   id: StudioTab;
@@ -35,6 +37,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { id: "home", label: "Главная", icon: <Home className="h-5 w-5" />, shortcut: "H" },
   { id: "prompts", label: "Промпты", icon: <FileCode className="h-5 w-5" />, shortcut: "P" },
+  { id: "experiments", label: "A/B Тесты", icon: <Beaker className="h-5 w-5" />, shortcut: "E" },
   { id: "pipeline", label: "Пайплайн", icon: <GitBranch className="h-5 w-5" />, shortcut: "L" },
   { id: "database", label: "База данных", icon: <Database className="h-5 w-5" />, shortcut: "D" },
   { id: "monitoring", label: "Мониторинг", icon: <BarChart3 className="h-5 w-5" />, shortcut: "M" },
@@ -169,6 +172,7 @@ export function ControlPlane({ onClose }: { onClose?: () => void }) {
           <div className="flex-1 overflow-auto">
             {activeTab === "home" && <HomePanel />}
             {activeTab === "prompts" && <PromptStudio onLog={addConsoleLog} />}
+            {activeTab === "experiments" && <ExperimentPanel onLog={addConsoleLog} />}
             {activeTab === "pipeline" && <PipelineBuilder onLog={addConsoleLog} />}
             {activeTab === "database" && <DatabaseStudio onLog={addConsoleLog} />}
             {activeTab === "monitoring" && <MonitoringDashboard />}
