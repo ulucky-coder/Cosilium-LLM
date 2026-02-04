@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,9 @@ import {
   RefreshCw,
   Download,
   Bell,
-  Filter,
+  Loader2,
+  Cloud,
+  CloudOff,
 } from "lucide-react";
 
 interface MetricCardProps {
@@ -26,9 +28,10 @@ interface MetricCardProps {
   change?: number;
   icon: React.ReactNode;
   color: string;
+  loading?: boolean;
 }
 
-function MetricCard({ title, value, change, icon, color }: MetricCardProps) {
+function MetricCard({ title, value, change, icon, color, loading }: MetricCardProps) {
   return (
     <div className="p-4 bg-slate-900 rounded-lg border border-slate-800">
       <div className="flex items-start justify-between mb-2">
@@ -49,44 +52,139 @@ function MetricCard({ title, value, change, icon, color }: MetricCardProps) {
           </div>
         )}
       </div>
-      <div className="text-2xl font-bold text-white">{value}</div>
+      <div className="text-2xl font-bold text-white">
+        {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : value}
+      </div>
       <div className="text-xs text-slate-400 mt-1">{title}</div>
     </div>
   );
 }
 
-const MOCK_LOGS = [
-  { time: "10:23:45", level: "error", message: "OpenAI rate limit exceeded", agent: "chatgpt" },
-  { time: "10:22:12", level: "success", message: "Analysis completed successfully", agent: "all" },
-  { time: "10:20:33", level: "warning", message: "DeepSeek response timeout, retrying...", agent: "deepseek" },
-  { time: "10:18:05", level: "success", message: "Session created: abc-123", agent: "system" },
-  { time: "10:15:22", level: "info", message: "User started new analysis", agent: "system" },
-  { time: "10:12:44", level: "success", message: "Synthesis completed", agent: "claude" },
-  { time: "10:08:19", level: "error", message: "Invalid JSON in response", agent: "gemini" },
-  { time: "10:05:33", level: "success", message: "Analysis completed successfully", agent: "all" },
-];
+interface Metrics {
+  totalRequests: number;
+  totalTokens: number;
+  totalCost: number;
+  totalErrors: number;
+  byAgent: Record<string, {
+    requests: number;
+    tokens: number;
+    cost: number;
+    avgLatency: number;
+    errors: number;
+  }>;
+}
 
-const AGENT_USAGE = [
-  { name: "ChatGPT", tokens: 112450, cost: 1.68, percentage: 45, color: "bg-emerald-500" },
-  { name: "Claude", tokens: 87320, cost: 1.31, percentage: 35, color: "bg-amber-500" },
-  { name: "Gemini", tokens: 29940, cost: 0.15, percentage: 12, color: "bg-blue-500" },
-  { name: "DeepSeek", tokens: 19982, cost: 0.04, percentage: 8, color: "bg-violet-500" },
-];
+interface LogEntry {
+  id: string;
+  created_at: string;
+  level: "info" | "warning" | "error" | "success";
+  message: string;
+  agent_id: string;
+}
+
+const AGENT_COLORS: Record<string, string> = {
+  chatgpt: "bg-emerald-500",
+  claude: "bg-amber-500",
+  gemini: "bg-blue-500",
+  deepseek: "bg-violet-500",
+};
 
 export function MonitoringDashboard() {
   const [timeRange, setTimeRange] = useState("24h");
   const [logFilter, setLogFilter] = useState<"all" | "error" | "warning" | "success">("all");
+  const [metrics, setMetrics] = useState<Metrics | null>(null);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [isLoadingMetrics, setIsLoadingMetrics] = useState(true);
+  const [isLoadingLogs, setIsLoadingLogs] = useState(true);
+  const [dataSource, setDataSource] = useState<"mock" | "database">("mock");
 
-  const filteredLogs = MOCK_LOGS.filter(
-    (log) => logFilter === "all" || log.level === logFilter
-  );
+  const loadMetrics = useCallback(async () => {
+    setIsLoadingMetrics(true);
+    try {
+      const response = await fetch(`/api/studio/metrics?period=${timeRange}`);
+      const data = await response.json();
+      if (data.success) {
+        setMetrics(data.data);
+        setDataSource(data.source === "database" ? "database" : "mock");
+      }
+    } catch (error) {
+      console.error("Failed to load metrics:", error);
+    } finally {
+      setIsLoadingMetrics(false);
+    }
+  }, [timeRange]);
+
+  const loadLogs = useCallback(async () => {
+    setIsLoadingLogs(true);
+    try {
+      const levelParam = logFilter !== "all" ? `&level=${logFilter}` : "";
+      const response = await fetch(`/api/studio/logs?limit=50${levelParam}`);
+      const data = await response.json();
+      if (data.success) {
+        setLogs(data.data);
+      }
+    } catch (error) {
+      console.error("Failed to load logs:", error);
+    } finally {
+      setIsLoadingLogs(false);
+    }
+  }, [logFilter]);
+
+  useEffect(() => {
+    loadMetrics();
+  }, [loadMetrics]);
+
+  useEffect(() => {
+    loadLogs();
+  }, [loadLogs]);
+
+  const handleRefresh = () => {
+    loadMetrics();
+    loadLogs();
+  };
+
+  const exportLogs = () => {
+    const csv = [
+      ["Time", "Level", "Message", "Agent"].join(","),
+      ...logs.map(log => [
+        new Date(log.created_at).toISOString(),
+        log.level,
+        `"${log.message.replace(/"/g, '""')}"`,
+        log.agent_id
+      ].join(","))
+    ].join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `llm-top-logs-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+  };
+
+  // Calculate percentages for agent usage chart
+  const agentUsage = metrics?.byAgent ? Object.entries(metrics.byAgent).map(([id, data]) => ({
+    name: id.charAt(0).toUpperCase() + id.slice(1),
+    tokens: data.tokens,
+    cost: data.cost,
+    percentage: metrics.totalTokens > 0 ? Math.round((data.tokens / metrics.totalTokens) * 100) : 0,
+    color: AGENT_COLORS[id] || "bg-slate-500",
+    avgLatency: data.avgLatency,
+  })) : [];
 
   return (
     <div className="p-6 space-y-6 overflow-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-white">Monitoring Dashboard</h2>
+          <h2 className="text-xl font-bold text-white flex items-center gap-2">
+            Monitoring Dashboard
+            {dataSource === "database" ? (
+              <Cloud className="h-4 w-4 text-emerald-400" title="Live data" />
+            ) : (
+              <CloudOff className="h-4 w-4 text-amber-400" title="Demo data" />
+            )}
+          </h2>
           <p className="text-sm text-slate-400">Real-time system metrics and logs</p>
         </div>
         <div className="flex items-center gap-2">
@@ -100,8 +198,14 @@ export function MonitoringDashboard() {
             <option value="7d">Last 7 days</option>
             <option value="30d">Last 30 days</option>
           </select>
-          <Button variant="outline" size="sm" className="border-slate-700">
-            <RefreshCw className="h-4 w-4 mr-2" />
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-slate-700"
+            onClick={handleRefresh}
+            disabled={isLoadingMetrics || isLoadingLogs}
+          >
+            <RefreshCw className={cn("h-4 w-4 mr-2", (isLoadingMetrics || isLoadingLogs) && "animate-spin")} />
             Refresh
           </Button>
         </div>
@@ -111,31 +215,35 @@ export function MonitoringDashboard() {
       <div className="grid grid-cols-4 gap-4">
         <MetricCard
           title="Total Requests"
-          value="147"
+          value={metrics?.totalRequests?.toLocaleString() || "0"}
           change={23}
           icon={<Zap className="h-5 w-5 text-white" />}
           color="bg-violet-600"
+          loading={isLoadingMetrics}
         />
         <MetricCard
           title="Total Tokens"
-          value="245,892"
+          value={metrics?.totalTokens?.toLocaleString() || "0"}
           change={45}
           icon={<BarChart3 className="h-5 w-5 text-white" />}
           color="bg-blue-600"
+          loading={isLoadingMetrics}
         />
         <MetricCard
           title="Total Cost"
-          value="$4.23"
+          value={`$${metrics?.totalCost?.toFixed(2) || "0.00"}`}
           change={12}
           icon={<DollarSign className="h-5 w-5 text-white" />}
           color="bg-emerald-600"
+          loading={isLoadingMetrics}
         />
         <MetricCard
           title="Errors"
-          value="3"
+          value={metrics?.totalErrors || 0}
           change={-50}
           icon={<AlertTriangle className="h-5 w-5 text-white" />}
           color="bg-red-600"
+          loading={isLoadingMetrics}
         />
       </div>
 
@@ -145,7 +253,7 @@ export function MonitoringDashboard() {
         <div className="bg-slate-900 rounded-lg border border-slate-800 p-4">
           <h3 className="text-sm font-medium text-white mb-4">Token Usage by Agent</h3>
           <div className="space-y-3">
-            {AGENT_USAGE.map((agent) => (
+            {agentUsage.map((agent) => (
               <div key={agent.name}>
                 <div className="flex items-center justify-between text-sm mb-1">
                   <span className="text-slate-300">{agent.name}</span>
@@ -155,7 +263,7 @@ export function MonitoringDashboard() {
                 </div>
                 <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
                   <div
-                    className={cn("h-full rounded-full", agent.color)}
+                    className={cn("h-full rounded-full transition-all", agent.color)}
                     style={{ width: `${agent.percentage}%` }}
                   />
                 </div>
@@ -166,7 +274,9 @@ export function MonitoringDashboard() {
           <div className="mt-4 pt-4 border-t border-slate-800">
             <div className="flex items-center justify-between text-sm">
               <span className="text-slate-400">Total Cost</span>
-              <span className="text-white font-medium">$3.18</span>
+              <span className="text-white font-medium">
+                ${agentUsage.reduce((sum, a) => sum + a.cost, 0).toFixed(2)}
+              </span>
             </div>
           </div>
         </div>
@@ -175,33 +285,38 @@ export function MonitoringDashboard() {
         <div className="bg-slate-900 rounded-lg border border-slate-800 p-4">
           <h3 className="text-sm font-medium text-white mb-4">Average Response Time</h3>
           <div className="space-y-3">
-            {[
-              { name: "ChatGPT", time: "2.3s", status: "good" },
-              { name: "Claude", time: "3.1s", status: "good" },
-              { name: "Gemini", time: "1.8s", status: "excellent" },
-              { name: "DeepSeek", time: "4.5s", status: "warning" },
-            ].map((agent) => (
-              <div key={agent.name} className="flex items-center justify-between">
-                <span className="text-sm text-slate-300">{agent.name}</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-slate-400">{agent.time}</span>
-                  <div
-                    className={cn(
-                      "w-2 h-2 rounded-full",
-                      agent.status === "excellent" && "bg-emerald-500",
-                      agent.status === "good" && "bg-blue-500",
-                      agent.status === "warning" && "bg-amber-500"
-                    )}
-                  />
+            {agentUsage.map((agent) => {
+              const latencyMs = agent.avgLatency || 0;
+              const latencySec = (latencyMs / 1000).toFixed(1);
+              const status = latencyMs < 2000 ? "excellent" : latencyMs < 3500 ? "good" : "warning";
+
+              return (
+                <div key={agent.name} className="flex items-center justify-between">
+                  <span className="text-sm text-slate-300">{agent.name}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-slate-400">{latencySec}s</span>
+                    <div
+                      className={cn(
+                        "w-2 h-2 rounded-full",
+                        status === "excellent" && "bg-emerald-500",
+                        status === "good" && "bg-blue-500",
+                        status === "warning" && "bg-amber-500"
+                      )}
+                    />
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="mt-4 pt-4 border-t border-slate-800">
             <div className="flex items-center justify-between text-sm">
               <span className="text-slate-400">Average</span>
-              <span className="text-white font-medium">2.9s</span>
+              <span className="text-white font-medium">
+                {agentUsage.length > 0
+                  ? (agentUsage.reduce((sum, a) => sum + (a.avgLatency || 0), 0) / agentUsage.length / 1000).toFixed(1)
+                  : "0"}s
+              </span>
             </div>
           </div>
         </div>
@@ -229,7 +344,7 @@ export function MonitoringDashboard() {
                 </button>
               ))}
             </div>
-            <Button variant="ghost" size="sm" className="h-7 text-slate-400">
+            <Button variant="ghost" size="sm" className="h-7 text-slate-400" onClick={exportLogs}>
               <Download className="h-3 w-3 mr-1" />
               Export
             </Button>
@@ -237,38 +352,48 @@ export function MonitoringDashboard() {
         </div>
 
         <div className="divide-y divide-slate-800 max-h-64 overflow-auto">
-          {filteredLogs.map((log, i) => (
-            <div key={i} className="flex items-center gap-4 px-4 py-2 text-sm hover:bg-slate-800/50">
-              <span className="text-xs text-slate-500 font-mono w-20">{log.time}</span>
-              <div className="w-20">
-                {log.level === "error" && (
-                  <Badge className="bg-red-600 text-xs">
-                    <XCircle className="h-3 w-3 mr-1" />
-                    Error
-                  </Badge>
-                )}
-                {log.level === "warning" && (
-                  <Badge className="bg-amber-600 text-xs">
-                    <AlertTriangle className="h-3 w-3 mr-1" />
-                    Warn
-                  </Badge>
-                )}
-                {log.level === "success" && (
-                  <Badge className="bg-emerald-600 text-xs">
-                    <CheckCircle className="h-3 w-3 mr-1" />
-                    OK
-                  </Badge>
-                )}
-                {log.level === "info" && (
-                  <Badge className="bg-blue-600 text-xs">Info</Badge>
-                )}
-              </div>
-              <span className="flex-1 text-slate-300">{log.message}</span>
-              <Badge variant="outline" className="text-xs border-slate-700">
-                {log.agent}
-              </Badge>
+          {isLoadingLogs ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
             </div>
-          ))}
+          ) : logs.length === 0 ? (
+            <div className="text-center py-8 text-slate-500">No logs found</div>
+          ) : (
+            logs.map((log) => (
+              <div key={log.id} className="flex items-center gap-4 px-4 py-2 text-sm hover:bg-slate-800/50">
+                <span className="text-xs text-slate-500 font-mono w-20">
+                  {new Date(log.created_at).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                </span>
+                <div className="w-20">
+                  {log.level === "error" && (
+                    <Badge className="bg-red-600 text-xs">
+                      <XCircle className="h-3 w-3 mr-1" />
+                      Error
+                    </Badge>
+                  )}
+                  {log.level === "warning" && (
+                    <Badge className="bg-amber-600 text-xs">
+                      <AlertTriangle className="h-3 w-3 mr-1" />
+                      Warn
+                    </Badge>
+                  )}
+                  {log.level === "success" && (
+                    <Badge className="bg-emerald-600 text-xs">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      OK
+                    </Badge>
+                  )}
+                  {log.level === "info" && (
+                    <Badge className="bg-blue-600 text-xs">Info</Badge>
+                  )}
+                </div>
+                <span className="flex-1 text-slate-300">{log.message}</span>
+                <Badge variant="outline" className="text-xs border-slate-700">
+                  {log.agent_id}
+                </Badge>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
@@ -285,27 +410,43 @@ export function MonitoringDashboard() {
         </div>
 
         <div className="space-y-2">
-          <div className="flex items-center gap-3 p-3 bg-red-950/30 border border-red-900/50 rounded">
-            <AlertTriangle className="h-4 w-4 text-red-400" />
-            <div className="flex-1">
-              <p className="text-sm text-red-300">OpenAI rate limit approaching (85%)</p>
-              <p className="text-xs text-red-400/70">Triggered 2 hours ago</p>
+          {(metrics?.totalErrors || 0) > 2 && (
+            <div className="flex items-center gap-3 p-3 bg-red-950/30 border border-red-900/50 rounded">
+              <AlertTriangle className="h-4 w-4 text-red-400" />
+              <div className="flex-1">
+                <p className="text-sm text-red-300">High error rate detected ({metrics?.totalErrors} errors)</p>
+                <p className="text-xs text-red-400/70">Check agent configurations</p>
+              </div>
+              <Button variant="ghost" size="sm" className="h-7 text-red-400">
+                Dismiss
+              </Button>
             </div>
-            <Button variant="ghost" size="sm" className="h-7 text-red-400">
-              Dismiss
-            </Button>
-          </div>
+          )}
 
-          <div className="flex items-center gap-3 p-3 bg-amber-950/30 border border-amber-900/50 rounded">
-            <Clock className="h-4 w-4 text-amber-400" />
-            <div className="flex-1">
-              <p className="text-sm text-amber-300">DeepSeek response time increased (4.5s avg)</p>
-              <p className="text-xs text-amber-400/70">Triggered 30 minutes ago</p>
+          {agentUsage.some(a => a.avgLatency > 4000) && (
+            <div className="flex items-center gap-3 p-3 bg-amber-950/30 border border-amber-900/50 rounded">
+              <Clock className="h-4 w-4 text-amber-400" />
+              <div className="flex-1">
+                <p className="text-sm text-amber-300">
+                  Slow response times detected ({agentUsage.filter(a => a.avgLatency > 4000).map(a => a.name).join(", ")})
+                </p>
+                <p className="text-xs text-amber-400/70">Consider optimizing prompts or switching models</p>
+              </div>
+              <Button variant="ghost" size="sm" className="h-7 text-amber-400">
+                Dismiss
+              </Button>
             </div>
-            <Button variant="ghost" size="sm" className="h-7 text-amber-400">
-              Dismiss
-            </Button>
-          </div>
+          )}
+
+          {(metrics?.totalErrors || 0) <= 2 && !agentUsage.some(a => a.avgLatency > 4000) && (
+            <div className="flex items-center gap-3 p-3 bg-emerald-950/30 border border-emerald-900/50 rounded">
+              <CheckCircle className="h-4 w-4 text-emerald-400" />
+              <div className="flex-1">
+                <p className="text-sm text-emerald-300">All systems operating normally</p>
+                <p className="text-xs text-emerald-400/70">No active alerts</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

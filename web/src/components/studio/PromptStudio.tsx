@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { usePromptStore } from "@/stores/promptStore";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -12,16 +12,15 @@ import {
   Save,
   RotateCcw,
   ChevronRight,
-  ChevronDown,
   FileCode,
   Bot,
   Sparkles,
-  Variable,
-  History,
   Copy,
   Check,
   Loader2,
-  AlertCircle,
+  RefreshCw,
+  Cloud,
+  CloudOff,
 } from "lucide-react";
 
 interface PromptStudioProps {
@@ -60,14 +59,69 @@ export function PromptStudio({ onLog }: PromptStudioProps) {
   const [testInput, setTestInput] = useState("Оценить инвестиционную привлекательность стартапа в сфере AI");
   const [testOutput, setTestOutput] = useState("");
   const [isTesting, setIsTesting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [dataSource, setDataSource] = useState<"memory" | "database" | "loading">("loading");
 
   const currentPrompts = agentPrompts[selectedAgent];
   const currentConfig = agentConfigs.find((c) => c.id === selectedAgent);
 
   const [localPrompts, setLocalPrompts] = useState(currentPrompts);
   const [localConfig, setLocalConfig] = useState(currentConfig);
+
+  // Load prompts from API on mount
+  const loadPrompts = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/studio/prompts");
+      const data = await response.json();
+
+      if (data.success && data.data.length > 0) {
+        setDataSource(data.source === "database" ? "database" : "memory");
+        onLog?.(`✓ Loaded prompts from ${data.source}`);
+
+        // Update store with loaded prompts
+        const promptsByAgent: Record<string, Record<string, string>> = {};
+        for (const prompt of data.data) {
+          if (!promptsByAgent[prompt.agent_id]) {
+            promptsByAgent[prompt.agent_id] = {};
+          }
+          const field = prompt.prompt_type === "system" ? "systemPrompt" :
+                       prompt.prompt_type === "critique" ? "critiquePrompt" :
+                       "userPromptTemplate";
+          promptsByAgent[prompt.agent_id][field] = prompt.content;
+        }
+
+        // Update each agent's prompts
+        for (const [agentId, prompts] of Object.entries(promptsByAgent)) {
+          if (agentPrompts[agentId]) {
+            updateAgentPrompts(agentId, { ...agentPrompts[agentId], ...prompts });
+          }
+        }
+      } else {
+        setDataSource("memory");
+      }
+    } catch (error) {
+      console.error("Failed to load prompts:", error);
+      setDataSource("memory");
+      onLog?.("⚠ Using local prompts (API unavailable)");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [agentPrompts, updateAgentPrompts, onLog]);
+
+  useEffect(() => {
+    loadPrompts();
+  }, []);
+
+  // Update local state when agent changes
+  useEffect(() => {
+    setLocalPrompts(agentPrompts[selectedAgent]);
+    setLocalConfig(agentConfigs.find((c) => c.id === selectedAgent));
+    setHasChanges(false);
+  }, [selectedAgent, agentPrompts, agentConfigs]);
 
   const handlePromptChange = (field: string, value: string) => {
     setLocalPrompts({ ...localPrompts, [field]: value });
@@ -79,13 +133,45 @@ export function PromptStudio({ onLog }: PromptStudioProps) {
     setHasChanges(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    setIsSaving(true);
+
+    // Save to local store first
     updateAgentPrompts(selectedAgent, localPrompts);
     if (localConfig) {
       updateAgentConfig(selectedAgent, localConfig);
     }
+
+    // Try to save to API
+    try {
+      const promptTypes = [
+        { type: "system", content: localPrompts.systemPrompt },
+        { type: "critique", content: localPrompts.critiquePrompt },
+        { type: "user_template", content: localPrompts.userPromptTemplate },
+      ];
+
+      for (const prompt of promptTypes) {
+        if (prompt.content) {
+          await fetch("/api/studio/prompts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              agent_id: selectedAgent,
+              prompt_type: prompt.type,
+              content: prompt.content,
+            }),
+          });
+        }
+      }
+
+      setDataSource("database");
+      onLog?.(`✓ Saved prompts for ${selectedAgent} to database`);
+    } catch (error) {
+      onLog?.(`✓ Saved prompts for ${selectedAgent} locally`);
+    }
+
     setHasChanges(false);
-    onLog?.(`✓ Saved prompts for ${selectedAgent}`);
+    setIsSaving(false);
   };
 
   const handleTest = async () => {
@@ -146,10 +232,28 @@ export function PromptStudio({ onLog }: PromptStudioProps) {
     <div className="flex h-full">
       {/* Left Panel - File Tree */}
       <div className="w-56 bg-slate-900 border-r border-slate-800 flex flex-col">
-        <div className="p-3 border-b border-slate-800">
+        <div className="p-3 border-b border-slate-800 flex items-center justify-between">
           <h3 className="text-xs font-medium text-slate-400 uppercase tracking-wider">
             Промпты агентов
           </h3>
+          <div className="flex items-center gap-1">
+            {dataSource === "database" ? (
+              <Cloud className="h-3 w-3 text-emerald-400" title="Synced with database" />
+            ) : dataSource === "loading" ? (
+              <Loader2 className="h-3 w-3 text-slate-400 animate-spin" />
+            ) : (
+              <CloudOff className="h-3 w-3 text-amber-400" title="Local only" />
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={loadPrompts}
+              disabled={isLoading}
+            >
+              <RefreshCw className={cn("h-3 w-3 text-slate-400", isLoading && "animate-spin")} />
+            </Button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-auto py-2">
@@ -157,12 +261,7 @@ export function PromptStudio({ onLog }: PromptStudioProps) {
             <button
               key={agent.id}
               type="button"
-              onClick={() => {
-                setSelectedAgent(agent.id);
-                setLocalPrompts(agentPrompts[agent.id]);
-                setLocalConfig(agentConfigs.find((c) => c.id === agent.id));
-                setHasChanges(false);
-              }}
+              onClick={() => setSelectedAgent(agent.id)}
               className={cn(
                 "w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors",
                 selectedAgent === agent.id
@@ -254,11 +353,17 @@ export function PromptStudio({ onLog }: PromptStudioProps) {
               variant="ghost"
               size="sm"
               onClick={handleSave}
-              disabled={!hasChanges}
+              disabled={!hasChanges || isSaving}
               className="h-8 text-blue-400 hover:text-blue-300"
             >
-              <Save className="h-4 w-4 mr-1" />
-              Save
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-1" />
+                  Save
+                </>
+              )}
             </Button>
           </div>
         </div>
