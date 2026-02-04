@@ -149,16 +149,16 @@ export function Sidebar() {
     return (
       <aside className="w-14 border-r border-slate-800 bg-slate-950/50 flex flex-col py-4">
         <div className="flex flex-col items-center gap-2">
-          <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-400 hover:text-white" onClick={createSession}>
+          <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-400 hover:text-white" onClick={createSession} title="Новая сессия">
             <Plus className="h-5 w-5" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-400 hover:text-white">
+          <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-400 hover:text-white" onClick={openCommandPalette} title="История">
             <Clock className="h-5 w-5" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-400 hover:text-white">
+          <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-400 hover:text-white" onClick={() => openDrawer("export")} title="Экспорт">
             <FileText className="h-5 w-5" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-400 hover:text-white">
+          <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-400 hover:text-white" onClick={() => openDrawer("settings")} title="Настройки">
             <Brain className="h-5 w-5" />
           </Button>
         </div>

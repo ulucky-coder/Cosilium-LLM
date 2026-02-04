@@ -34,6 +34,7 @@ export function WorkspaceLayout() {
 
 function WelcomeScreen() {
   const { createSession } = useSessionStore();
+  const { openCommandPalette } = useUIStore();
 
   const handleCreateSession = () => {
     console.log("Creating session...");
@@ -57,7 +58,12 @@ function WelcomeScreen() {
             <Sparkles className="h-4 w-4 mr-2" />
             Новый анализ
           </Button>
-          <Button type="button" variant="outline" className="border-slate-700 hover:bg-slate-800">
+          <Button
+            type="button"
+            variant="outline"
+            className="border-slate-700 hover:bg-slate-800"
+            onClick={openCommandPalette}
+          >
             <kbd className="mr-2 text-xs opacity-70">⌘K</kbd>
             Командная палитра
           </Button>

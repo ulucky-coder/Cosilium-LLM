@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ModeSwitcher } from "@/components/mode/ModeSwitcher";
 
 export function Header() {
-  const { openCommandPalette, toggleSidebar, sidebarCollapsed, viewMode } = useUIStore();
+  const { openCommandPalette, toggleSidebar, sidebarCollapsed, viewMode, openDrawer } = useUIStore();
   const { currentSession } = useSessionStore();
 
   const activeAgents = currentSession?.analyses.map((a) => a.agent_name.toLowerCase()) || [];
@@ -75,12 +75,24 @@ export function Header() {
         </div>
 
         {/* Notifications */}
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-white">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-slate-400 hover:text-white"
+          onClick={openCommandPalette}
+          title="Уведомления (⌘K)"
+        >
           <Bell className="h-4 w-4" />
         </Button>
 
         {/* Settings */}
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-white">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-slate-400 hover:text-white"
+          onClick={() => openDrawer("settings")}
+          title="Настройки"
+        >
           <Settings className="h-4 w-4" />
         </Button>
       </div>
