@@ -35,6 +35,11 @@ export function WorkspaceLayout() {
 function WelcomeScreen() {
   const { createSession } = useSessionStore();
 
+  const handleCreateSession = () => {
+    console.log("Creating session...");
+    createSession();
+  };
+
   return (
     <div className="flex-1 flex items-center justify-center">
       <div className="text-center max-w-md px-4">
@@ -45,13 +50,14 @@ function WelcomeScreen() {
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Button
-            onClick={createSession}
+            type="button"
+            onClick={handleCreateSession}
             className="bg-violet-600 hover:bg-violet-500"
           >
             <Sparkles className="h-4 w-4 mr-2" />
             Новый анализ
           </Button>
-          <Button variant="outline" className="border-slate-700 hover:bg-slate-800">
+          <Button type="button" variant="outline" className="border-slate-700 hover:bg-slate-800">
             <kbd className="mr-2 text-xs opacity-70">⌘K</kbd>
             Командная палитра
           </Button>

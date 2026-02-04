@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 import { TaskType, AgentId, DEFAULT_SETTINGS } from "@/lib/constants";
 
 // Types
@@ -174,11 +175,37 @@ const createEmptySession = (): Session => ({
   updatedAt: new Date(),
 });
 
-export const useSessionStore = create<SessionState>((set, get) => ({
-  currentSession: null,
-  sessions: [],
+// Date reviver for JSON parsing
+const dateReviver = (_key: string, value: unknown): unknown => {
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)) {
+    return new Date(value);
+  }
+  return value;
+};
 
-  createSession: () => {
+// Custom storage wrapper that handles Date serialization
+const customStorage = {
+  getItem: (name: string): string | null => {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem(name);
+  },
+  setItem: (name: string, value: string): void => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(name, value);
+  },
+  removeItem: (name: string): void => {
+    if (typeof window === "undefined") return;
+    localStorage.removeItem(name);
+  },
+};
+
+export const useSessionStore = create<SessionState>()(
+  persist(
+    (set, get) => ({
+      currentSession: null,
+      sessions: [],
+
+      createSession: () => {
     const session = createEmptySession();
     set({ currentSession: session });
   },
@@ -403,11 +430,24 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   },
 
   setStatus: (status) => {
-    set((state) => ({
-      currentSession: state.currentSession
-        ? { ...state.currentSession, status, updatedAt: new Date() }
-        : null,
-    }));
+    set((state) => {
+      if (!state.currentSession) return state;
+
+      const updatedSession = { ...state.currentSession, status, updatedAt: new Date() };
+
+      // When session completes, add to history if not already there
+      if (status === "complete") {
+        const existsInHistory = state.sessions.some((s) => s.id === updatedSession.id);
+        if (!existsInHistory) {
+          return {
+            currentSession: updatedSession,
+            sessions: [updatedSession, ...state.sessions].slice(0, 50), // Keep max 50 sessions
+          };
+        }
+      }
+
+      return { currentSession: updatedSession };
+    });
   },
 
   setCurrentIteration: (currentIteration) => {
@@ -417,4 +457,22 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         : null,
     }));
   },
-}));
+    }),
+    {
+      name: "llm-top-sessions",
+      storage: createJSONStorage(() => customStorage, {
+        reviver: dateReviver,
+      }),
+      partialize: (state) => ({
+        sessions: state.sessions,
+        currentSession: state.currentSession,
+      }) as SessionState,
+      skipHydration: true,
+    }
+  )
+);
+
+// Rehydrate on client side
+if (typeof window !== "undefined") {
+  useSessionStore.persist.rehydrate();
+}
