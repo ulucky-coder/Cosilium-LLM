@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { calculateCost, MODEL_PRICING } from "@/lib/metrics";
+import { getSupabase } from "@/lib/supabase";
 
 // Types
 interface ContextItem {
@@ -12,10 +14,12 @@ interface AnalysisRequest {
   task_type: string;
   max_iterations: number;
   context?: ContextItem[];
+  session_id?: string;
 }
 
 interface AgentAnalysis {
   agent_name: string;
+  agent_id: string;
   confidence: number;
   analysis: string;
   key_points: string[];
@@ -23,7 +27,10 @@ interface AgentAnalysis {
   assumptions: string[];
   duration: number;
   tokens: number;
+  prompt_tokens: number;
+  completion_tokens: number;
   cost: number;
+  model: string;
 }
 
 interface SynthesisResult {
@@ -83,6 +90,53 @@ const AGENT_PROMPTS: Record<string, string> = {
 3. Данные важнее мнений`,
 };
 
+// Record metric to database
+async function recordMetric(data: {
+  session_id?: string;
+  agent_id: string;
+  model: string;
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+  cost_usd: number;
+  latency_ms: number;
+  status: "success" | "error" | "timeout";
+  error_message?: string;
+}) {
+  const supabase = getSupabase();
+  if (!supabase) return;
+
+  try {
+    await supabase.from("llm_top_metrics").insert({
+      user_id: "default",
+      ...data,
+    });
+  } catch (error) {
+    console.error("Failed to record metric:", error);
+  }
+}
+
+// Record log to database
+async function recordLog(data: {
+  level: "info" | "warning" | "error" | "success";
+  message: string;
+  agent_id?: string;
+  session_id?: string;
+  metadata?: Record<string, unknown>;
+}) {
+  const supabase = getSupabase();
+  if (!supabase) return;
+
+  try {
+    await supabase.from("llm_top_logs").insert({
+      user_id: "default",
+      ...data,
+    });
+  } catch (error) {
+    console.error("Failed to record log:", error);
+  }
+}
+
 // Format context for prompts
 function formatContext(context?: ContextItem[]): string {
   if (!context || context.length === 0) return "";
@@ -96,9 +150,15 @@ function formatContext(context?: ContextItem[]): string {
 }
 
 // Call OpenAI API
-async function callOpenAI(task: string, taskType: string, context?: ContextItem[]): Promise<AgentAnalysis | null> {
+async function callOpenAI(
+  task: string,
+  taskType: string,
+  context?: ContextItem[],
+  sessionId?: string
+): Promise<AgentAnalysis | null> {
   if (!OPENAI_API_KEY) return null;
 
+  const model = "gpt-4o";
   const startTime = Date.now();
   const contextStr = formatContext(context);
 
@@ -110,7 +170,7 @@ async function callOpenAI(task: string, taskType: string, context?: ContextItem[
         "Authorization": `Bearer ${OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "gpt-4o",
+        model,
         messages: [
           { role: "system", content: AGENT_PROMPTS.chatgpt },
           { role: "user", content: `Тип анализа: ${taskType}\n\nЗадача:\n${task}${contextStr}\n\nПроведи структурированный анализ. Выдели ключевые точки, риски и допущения.` },
@@ -119,36 +179,116 @@ async function callOpenAI(task: string, taskType: string, context?: ContextItem[
       }),
     });
 
+    const latencyMs = Date.now() - startTime;
+
     if (!response.ok) {
-      console.error("OpenAI API error:", response.status);
+      const errorText = await response.text();
+      console.error("OpenAI API error:", response.status, errorText);
+
+      // Record error metric
+      recordMetric({
+        session_id: sessionId,
+        agent_id: "chatgpt",
+        model,
+        prompt_tokens: 0,
+        completion_tokens: 0,
+        total_tokens: 0,
+        cost_usd: 0,
+        latency_ms: latencyMs,
+        status: "error",
+        error_message: `HTTP ${response.status}: ${errorText.slice(0, 200)}`,
+      });
+
+      recordLog({
+        level: "error",
+        message: `OpenAI API error: ${response.status}`,
+        agent_id: "chatgpt",
+        session_id: sessionId,
+      });
+
       return null;
     }
 
     const data = await response.json();
     const content = data.choices[0]?.message?.content || "";
-    const tokens = data.usage?.total_tokens || 0;
+    const promptTokens = data.usage?.prompt_tokens || 0;
+    const completionTokens = data.usage?.completion_tokens || 0;
+    const totalTokens = data.usage?.total_tokens || 0;
+    const cost = calculateCost(model, promptTokens, completionTokens);
+
+    // Record success metric
+    recordMetric({
+      session_id: sessionId,
+      agent_id: "chatgpt",
+      model,
+      prompt_tokens: promptTokens,
+      completion_tokens: completionTokens,
+      total_tokens: totalTokens,
+      cost_usd: cost,
+      latency_ms: latencyMs,
+      status: "success",
+    });
+
+    recordLog({
+      level: "success",
+      message: `ChatGPT analysis completed (${totalTokens} tokens, $${cost.toFixed(4)})`,
+      agent_id: "chatgpt",
+      session_id: sessionId,
+    });
 
     return {
       agent_name: "ChatGPT",
+      agent_id: "chatgpt",
       confidence: 0.85,
       analysis: content,
       key_points: extractKeyPoints(content),
       risks: extractRisks(content),
       assumptions: extractAssumptions(content),
-      duration: Date.now() - startTime,
-      tokens,
-      cost: tokens * 0.00001, // Approximate
+      duration: latencyMs,
+      tokens: totalTokens,
+      prompt_tokens: promptTokens,
+      completion_tokens: completionTokens,
+      cost,
+      model,
     };
   } catch (error) {
+    const latencyMs = Date.now() - startTime;
     console.error("OpenAI API error:", error);
+
+    recordMetric({
+      session_id: sessionId,
+      agent_id: "chatgpt",
+      model,
+      prompt_tokens: 0,
+      completion_tokens: 0,
+      total_tokens: 0,
+      cost_usd: 0,
+      latency_ms: latencyMs,
+      status: "error",
+      error_message: error instanceof Error ? error.message : "Unknown error",
+    });
+
+    recordLog({
+      level: "error",
+      message: `OpenAI API exception: ${error instanceof Error ? error.message : "Unknown"}`,
+      agent_id: "chatgpt",
+      session_id: sessionId,
+    });
+
     return null;
   }
 }
 
 // Call Anthropic API
-async function callAnthropic(task: string, taskType: string, context?: ContextItem[]): Promise<AgentAnalysis | null> {
+async function callAnthropic(
+  task: string,
+  taskType: string,
+  context?: ContextItem[],
+  sessionId?: string
+): Promise<AgentAnalysis | null> {
   if (!ANTHROPIC_API_KEY) return null;
 
+  const model = "claude-3-5-sonnet-20241022";
   const startTime = Date.now();
   const contextStr = formatContext(context);
 
@@ -161,7 +301,7 @@ async function callAnthropic(task: string, taskType: string, context?: ContextIt
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-3-5-sonnet-20241022",
+        model,
         max_tokens: 4096,
         system: AGENT_PROMPTS.claude,
         messages: [
@@ -170,42 +310,120 @@ async function callAnthropic(task: string, taskType: string, context?: ContextIt
       }),
     });
 
+    const latencyMs = Date.now() - startTime;
+
     if (!response.ok) {
-      console.error("Anthropic API error:", response.status);
+      const errorText = await response.text();
+      console.error("Anthropic API error:", response.status, errorText);
+
+      recordMetric({
+        session_id: sessionId,
+        agent_id: "claude",
+        model,
+        prompt_tokens: 0,
+        completion_tokens: 0,
+        total_tokens: 0,
+        cost_usd: 0,
+        latency_ms: latencyMs,
+        status: "error",
+        error_message: `HTTP ${response.status}: ${errorText.slice(0, 200)}`,
+      });
+
+      recordLog({
+        level: "error",
+        message: `Anthropic API error: ${response.status}`,
+        agent_id: "claude",
+        session_id: sessionId,
+      });
+
       return null;
     }
 
     const data = await response.json();
     const content = data.content[0]?.text || "";
-    const tokens = (data.usage?.input_tokens || 0) + (data.usage?.output_tokens || 0);
+    const promptTokens = data.usage?.input_tokens || 0;
+    const completionTokens = data.usage?.output_tokens || 0;
+    const totalTokens = promptTokens + completionTokens;
+    const cost = calculateCost(model, promptTokens, completionTokens);
+
+    recordMetric({
+      session_id: sessionId,
+      agent_id: "claude",
+      model,
+      prompt_tokens: promptTokens,
+      completion_tokens: completionTokens,
+      total_tokens: totalTokens,
+      cost_usd: cost,
+      latency_ms: latencyMs,
+      status: "success",
+    });
+
+    recordLog({
+      level: "success",
+      message: `Claude analysis completed (${totalTokens} tokens, $${cost.toFixed(4)})`,
+      agent_id: "claude",
+      session_id: sessionId,
+    });
 
     return {
       agent_name: "Claude",
+      agent_id: "claude",
       confidence: 0.88,
       analysis: content,
       key_points: extractKeyPoints(content),
       risks: extractRisks(content),
       assumptions: extractAssumptions(content),
-      duration: Date.now() - startTime,
-      tokens,
-      cost: tokens * 0.000015,
+      duration: latencyMs,
+      tokens: totalTokens,
+      prompt_tokens: promptTokens,
+      completion_tokens: completionTokens,
+      cost,
+      model,
     };
   } catch (error) {
+    const latencyMs = Date.now() - startTime;
     console.error("Anthropic API error:", error);
+
+    recordMetric({
+      session_id: sessionId,
+      agent_id: "claude",
+      model,
+      prompt_tokens: 0,
+      completion_tokens: 0,
+      total_tokens: 0,
+      cost_usd: 0,
+      latency_ms: latencyMs,
+      status: "error",
+      error_message: error instanceof Error ? error.message : "Unknown error",
+    });
+
+    recordLog({
+      level: "error",
+      message: `Anthropic API exception: ${error instanceof Error ? error.message : "Unknown"}`,
+      agent_id: "claude",
+      session_id: sessionId,
+    });
+
     return null;
   }
 }
 
 // Call Google AI API
-async function callGoogleAI(task: string, taskType: string, context?: ContextItem[]): Promise<AgentAnalysis | null> {
+async function callGoogleAI(
+  task: string,
+  taskType: string,
+  context?: ContextItem[],
+  sessionId?: string
+): Promise<AgentAnalysis | null> {
   if (!GOOGLE_API_KEY) return null;
 
+  const model = "gemini-2.0-flash";
   const startTime = Date.now();
   const contextStr = formatContext(context);
 
   try {
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GOOGLE_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GOOGLE_API_KEY}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -220,36 +438,114 @@ async function callGoogleAI(task: string, taskType: string, context?: ContextIte
       }
     );
 
+    const latencyMs = Date.now() - startTime;
+
     if (!response.ok) {
-      console.error("Google AI API error:", response.status);
+      const errorText = await response.text();
+      console.error("Google AI API error:", response.status, errorText);
+
+      recordMetric({
+        session_id: sessionId,
+        agent_id: "gemini",
+        model,
+        prompt_tokens: 0,
+        completion_tokens: 0,
+        total_tokens: 0,
+        cost_usd: 0,
+        latency_ms: latencyMs,
+        status: "error",
+        error_message: `HTTP ${response.status}: ${errorText.slice(0, 200)}`,
+      });
+
+      recordLog({
+        level: "error",
+        message: `Google AI API error: ${response.status}`,
+        agent_id: "gemini",
+        session_id: sessionId,
+      });
+
       return null;
     }
 
     const data = await response.json();
     const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-    const tokens = data.usageMetadata?.totalTokenCount || 1000;
+    const promptTokens = data.usageMetadata?.promptTokenCount || 0;
+    const completionTokens = data.usageMetadata?.candidatesTokenCount || 0;
+    const totalTokens = data.usageMetadata?.totalTokenCount || promptTokens + completionTokens;
+    const cost = calculateCost(model, promptTokens, completionTokens);
+
+    recordMetric({
+      session_id: sessionId,
+      agent_id: "gemini",
+      model,
+      prompt_tokens: promptTokens,
+      completion_tokens: completionTokens,
+      total_tokens: totalTokens,
+      cost_usd: cost,
+      latency_ms: latencyMs,
+      status: "success",
+    });
+
+    recordLog({
+      level: "success",
+      message: `Gemini analysis completed (${totalTokens} tokens, $${cost.toFixed(4)})`,
+      agent_id: "gemini",
+      session_id: sessionId,
+    });
 
     return {
       agent_name: "Gemini",
+      agent_id: "gemini",
       confidence: 0.82,
       analysis: content,
       key_points: extractKeyPoints(content),
       risks: extractRisks(content),
       assumptions: extractAssumptions(content),
-      duration: Date.now() - startTime,
-      tokens,
-      cost: tokens * 0.000005,
+      duration: latencyMs,
+      tokens: totalTokens,
+      prompt_tokens: promptTokens,
+      completion_tokens: completionTokens,
+      cost,
+      model,
     };
   } catch (error) {
+    const latencyMs = Date.now() - startTime;
     console.error("Google AI API error:", error);
+
+    recordMetric({
+      session_id: sessionId,
+      agent_id: "gemini",
+      model,
+      prompt_tokens: 0,
+      completion_tokens: 0,
+      total_tokens: 0,
+      cost_usd: 0,
+      latency_ms: latencyMs,
+      status: "error",
+      error_message: error instanceof Error ? error.message : "Unknown error",
+    });
+
+    recordLog({
+      level: "error",
+      message: `Google AI API exception: ${error instanceof Error ? error.message : "Unknown"}`,
+      agent_id: "gemini",
+      session_id: sessionId,
+    });
+
     return null;
   }
 }
 
 // Call DeepSeek API
-async function callDeepSeek(task: string, taskType: string, context?: ContextItem[]): Promise<AgentAnalysis | null> {
+async function callDeepSeek(
+  task: string,
+  taskType: string,
+  context?: ContextItem[],
+  sessionId?: string
+): Promise<AgentAnalysis | null> {
   if (!DEEPSEEK_API_KEY) return null;
 
+  const model = "deepseek-chat";
   const startTime = Date.now();
   const contextStr = formatContext(context);
 
@@ -261,7 +557,7 @@ async function callDeepSeek(task: string, taskType: string, context?: ContextIte
         "Authorization": `Bearer ${DEEPSEEK_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "deepseek-chat",
+        model,
         messages: [
           { role: "system", content: AGENT_PROMPTS.deepseek },
           { role: "user", content: `Тип анализа: ${taskType}\n\nЗадача:\n${task}${contextStr}\n\nПроведи количественный анализ с расчётами. Выдели ключевые точки, риски и допущения.` },
@@ -270,28 +566,100 @@ async function callDeepSeek(task: string, taskType: string, context?: ContextIte
       }),
     });
 
+    const latencyMs = Date.now() - startTime;
+
     if (!response.ok) {
-      console.error("DeepSeek API error:", response.status);
+      const errorText = await response.text();
+      console.error("DeepSeek API error:", response.status, errorText);
+
+      recordMetric({
+        session_id: sessionId,
+        agent_id: "deepseek",
+        model,
+        prompt_tokens: 0,
+        completion_tokens: 0,
+        total_tokens: 0,
+        cost_usd: 0,
+        latency_ms: latencyMs,
+        status: "error",
+        error_message: `HTTP ${response.status}: ${errorText.slice(0, 200)}`,
+      });
+
+      recordLog({
+        level: "error",
+        message: `DeepSeek API error: ${response.status}`,
+        agent_id: "deepseek",
+        session_id: sessionId,
+      });
+
       return null;
     }
 
     const data = await response.json();
     const content = data.choices[0]?.message?.content || "";
-    const tokens = data.usage?.total_tokens || 0;
+    const promptTokens = data.usage?.prompt_tokens || 0;
+    const completionTokens = data.usage?.completion_tokens || 0;
+    const totalTokens = data.usage?.total_tokens || promptTokens + completionTokens;
+    const cost = calculateCost(model, promptTokens, completionTokens);
+
+    recordMetric({
+      session_id: sessionId,
+      agent_id: "deepseek",
+      model,
+      prompt_tokens: promptTokens,
+      completion_tokens: completionTokens,
+      total_tokens: totalTokens,
+      cost_usd: cost,
+      latency_ms: latencyMs,
+      status: "success",
+    });
+
+    recordLog({
+      level: "success",
+      message: `DeepSeek analysis completed (${totalTokens} tokens, $${cost.toFixed(4)})`,
+      agent_id: "deepseek",
+      session_id: sessionId,
+    });
 
     return {
       agent_name: "DeepSeek",
+      agent_id: "deepseek",
       confidence: 0.86,
       analysis: content,
       key_points: extractKeyPoints(content),
       risks: extractRisks(content),
       assumptions: extractAssumptions(content),
-      duration: Date.now() - startTime,
-      tokens,
-      cost: tokens * 0.000002,
+      duration: latencyMs,
+      tokens: totalTokens,
+      prompt_tokens: promptTokens,
+      completion_tokens: completionTokens,
+      cost,
+      model,
     };
   } catch (error) {
+    const latencyMs = Date.now() - startTime;
     console.error("DeepSeek API error:", error);
+
+    recordMetric({
+      session_id: sessionId,
+      agent_id: "deepseek",
+      model,
+      prompt_tokens: 0,
+      completion_tokens: 0,
+      total_tokens: 0,
+      cost_usd: 0,
+      latency_ms: latencyMs,
+      status: "error",
+      error_message: error instanceof Error ? error.message : "Unknown error",
+    });
+
+    recordLog({
+      level: "error",
+      message: `DeepSeek API exception: ${error instanceof Error ? error.message : "Unknown"}`,
+      agent_id: "deepseek",
+      session_id: sessionId,
+    });
+
     return null;
   }
 }
@@ -321,7 +689,6 @@ function extractKeyPoints(text: string): string[] {
   }
 
   if (points.length === 0) {
-    // Fallback: extract first few sentences
     const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 20);
     return sentences.slice(0, 3).map(s => s.trim());
   }
@@ -383,6 +750,7 @@ function generateMockAnalyses(task: string, taskType: string): AgentAnalysis[] {
   return [
     {
       agent_name: "ChatGPT",
+      agent_id: "chatgpt",
       confidence: 0.85,
       analysis: `${baseAnalysis}\n\n**Логический анализ**:\nС точки зрения логики, данная задача содержит несколько потенциальных противоречий, которые необходимо разрешить перед принятием решения.`,
       key_points: [
@@ -400,10 +768,14 @@ function generateMockAnalyses(task: string, taskType: string): AgentAnalysis[] {
       ],
       duration: 2500,
       tokens: 1250,
+      prompt_tokens: 450,
+      completion_tokens: 800,
       cost: 0.0125,
+      model: "gpt-4o",
     },
     {
       agent_name: "Claude",
+      agent_id: "claude",
       confidence: 0.88,
       analysis: `${baseAnalysis}\n\n**Системный анализ**:\nРассматривая задачу как систему, можно выделить несколько взаимосвязанных компонентов, которые влияют друг на друга.`,
       key_points: [
@@ -421,10 +793,14 @@ function generateMockAnalyses(task: string, taskType: string): AgentAnalysis[] {
       ],
       duration: 3200,
       tokens: 1480,
+      prompt_tokens: 480,
+      completion_tokens: 1000,
       cost: 0.022,
+      model: "claude-3-5-sonnet-20241022",
     },
     {
       agent_name: "Gemini",
+      agent_id: "gemini",
       confidence: 0.82,
       analysis: `${baseAnalysis}\n\n**Альтернативные подходы**:\n1. Традиционный поэтапный подход\n2. Agile-методология с короткими итерациями\n3. Гибридный подход с элементами обоих методов`,
       key_points: [
@@ -442,10 +818,14 @@ function generateMockAnalyses(task: string, taskType: string): AgentAnalysis[] {
       ],
       duration: 2100,
       tokens: 980,
+      prompt_tokens: 380,
+      completion_tokens: 600,
       cost: 0.005,
+      model: "gemini-2.0-flash",
     },
     {
       agent_name: "DeepSeek",
+      agent_id: "deepseek",
       confidence: 0.86,
       analysis: `${baseAnalysis}\n\n**Количественный анализ**:\n- Оценка трудозатрат: 120-180 человеко-часов\n- ROI прогноз: 150-200% за 12 месяцев\n- Вероятность успеха: 75-85%`,
       key_points: [
@@ -463,7 +843,10 @@ function generateMockAnalyses(task: string, taskType: string): AgentAnalysis[] {
       ],
       duration: 1800,
       tokens: 850,
+      prompt_tokens: 350,
+      completion_tokens: 500,
       cost: 0.0017,
+      model: "deepseek-chat",
     },
   ];
 }
@@ -527,9 +910,11 @@ function generateMockSynthesis(analyses: AgentAnalysis[], task: string): Synthes
 
 // Main handler
 export async function POST(request: NextRequest) {
+  const requestStartTime = Date.now();
+
   try {
     const body: AnalysisRequest = await request.json();
-    const { task, task_type, max_iterations, context } = body;
+    const { task, task_type, max_iterations, context, session_id } = body;
 
     if (!task || !task.trim()) {
       return NextResponse.json(
@@ -538,15 +923,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Log analysis start
+    recordLog({
+      level: "info",
+      message: `Analysis started: "${task.slice(0, 50)}..."`,
+      agent_id: "system",
+      session_id,
+      metadata: { task_type, max_iterations },
+    });
+
     let analyses: AgentAnalysis[] = [];
 
     if (useRealAPIs) {
       // Call real APIs in parallel with context
       const results = await Promise.all([
-        callOpenAI(task, task_type, context),
-        callAnthropic(task, task_type, context),
-        callGoogleAI(task, task_type, context),
-        callDeepSeek(task, task_type, context),
+        callOpenAI(task, task_type, context, session_id),
+        callAnthropic(task, task_type, context, session_id),
+        callGoogleAI(task, task_type, context, session_id),
+        callDeepSeek(task, task_type, context, session_id),
       ]);
 
       analyses = results.filter((r): r is AgentAnalysis => r !== null);
@@ -554,24 +948,61 @@ export async function POST(request: NextRequest) {
       // If no real results, fall back to mock
       if (analyses.length === 0) {
         analyses = generateMockAnalyses(task, task_type);
+        recordLog({
+          level: "warning",
+          message: "All API calls failed, using mock data",
+          agent_id: "system",
+          session_id,
+        });
       }
     } else {
       // Use mock data
-      // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 2000));
       analyses = generateMockAnalyses(task, task_type);
     }
 
     const synthesis = generateMockSynthesis(analyses, task);
 
+    // Calculate totals
+    const totalTokens = analyses.reduce((sum, a) => sum + a.tokens, 0);
+    const totalCost = analyses.reduce((sum, a) => sum + a.cost, 0);
+    const totalDuration = Date.now() - requestStartTime;
+
+    // Log analysis completion
+    recordLog({
+      level: "success",
+      message: `Analysis completed: ${analyses.length} agents, ${totalTokens} tokens, $${totalCost.toFixed(4)}`,
+      agent_id: "system",
+      session_id,
+      metadata: {
+        agents: analyses.map(a => a.agent_id),
+        total_tokens: totalTokens,
+        total_cost: totalCost,
+        duration_ms: totalDuration,
+      },
+    });
+
     return NextResponse.json({
       analyses,
       synthesis,
       iterations: max_iterations,
       mode: useRealAPIs ? "live" : "demo",
+      metrics: {
+        total_tokens: totalTokens,
+        total_cost: totalCost,
+        duration_ms: totalDuration,
+        agents_count: analyses.length,
+      },
     });
   } catch (error) {
     console.error("Analysis error:", error);
+
+    recordLog({
+      level: "error",
+      message: `Analysis failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      agent_id: "system",
+    });
+
     return NextResponse.json(
       { error: "Analysis failed", details: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 }
